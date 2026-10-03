@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KLAUS-XMD · Pair</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .container {
+        max-width: 480px;
+        width: 100%;
+        text-align: center;
+    }
+    .header {
+        margin-bottom: 1.5rem;
+    }
+    .header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+    .header p {
+        color: #888;
+        font-size: 0.9rem;
+    }
+    .card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        backdrop-filter: blur(10px);
+    }
+    .status {
+        font-size: 0.85rem;
+        color: #feca57;
+        margin-bottom: 1rem;
+        min-height: 1.2em;
+    }
+    .qr-container {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 12px;
+        display: inline-block;
+        margin: 0.5rem 0;
+    }
+    .qr-container img {
+        width: 280px;
+        height: 280px;
+        display: block;
+    }
+    .session-display {
+        background: #1a1a1a;
+        border: 1px solid #48dbfb;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        color: #48dbfb;
+        word-break: break-all;
+        margin: 0.5rem 0;
+        user-select: all;
+    }
+    .btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #48dbfb, #0abde3);
+        color: #000;
+        text-decoration: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        margin: 0.5rem 0.25rem;
+        cursor: pointer;
+        border: none;
+        font-size: 0.95rem;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary {
+        background: linear-gradient(135deg, #feca57, #ff9f43);
+    }
+    .hidden { display: none; }
+    .info {
+        color: #888;
+        font-size: 0.8rem;
+        margin-top: 1rem;
+        line-height: 1.5;
+    }
+    .info a {
+        color: #48dbfb;
+        text-decoration: none;
+    }
+    .info a:hover { text-decoration: underline; }
+    .pulse {
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>𝐊𝐋𝐀𝐔𝐒-𝐗𝐌𝐃</h1>
+            <p>Scan with WhatsApp to get your session ID</p>
+        </div>
+
+        <div class="card" id="qrCard">
+            <div class="status pulse" id="status">Connecting to WhatsApp...</div>
+            <div class="qr-container" id="qrContainer">
+                <img src="" alt="QR Code" id="qrImg" class="hidden">
+            </div>
+        </div>
+
+        <div class="card hidden" id="sessionCard">
+            <div class="status" style="color: #48dbfb;">✅ Successfully paired!</div>
+            <p style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #888;">
+                Copy this Session ID and paste it into your <code style="color: #feca57;">.env</code> file:
+            </p>
+            <div class="session-display" id="sessionId">Loading...</div>
+            <button class="btn" onclick="copySession()">📋 Copy</button>
+            <a class="btn btn-secondary" href="https://github.com/nikolaklaus0-dev/Samaritan" target="_blank">📱 Get Bot</a>
+        </div>
+
+        <div class="card hidden" id="errorCard">
+            <div class="status" style="color: #ff6b6b;">❌ Error</div>
+            <p id="errorMessage" style="font-size: 0.9rem; color: #aaa;"></p>
+            <button class="btn" onclick="location.reload()">🔄 Retry</button>
+        </div>
+
+        <div class="info">
+            ⏱️ Session ID expires in 30 minutes<br>
+            🔒 One-time use — keep it private<br>
+            📖 <a href="https://github.com/nikolaklaus0-dev/Samaritan" target="_blank">View source on GitHub</a>
+        </div>
+    </div>
+
+<script>
+    let sessionId = '';
+
+    const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+
+    const statusEl = document.getElementById('status');
+    const qrContainer = document.getElementById('qrContainer');
+    const qrImg = document.getElementById('qrImg');
+    const sessionCard = document.getElementById('sessionCard');
+    const sessionIdEl = document.getElementById('sessionId');
+    const errorCard = document.getElementById('errorCard');
+    const errorMessageEl = document.getElementById('errorMessage');
+
+    ws.onopen = () => {
+        statusEl.textContent = 'Generate QR...';
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+            case 'qr':
+                qrImg.src = data.qr;
+                qrImg.classList.remove('hidden');
+                statusEl.textContent = '📷 Scan the QR with WhatsApp';
+                statusEl.classList.add('pulse');
+                break;
+
+            case 'session_id':
+                sessionId = data.id;
+                sessionIdEl.textContent = data.id;
+                qrContainer.parentElement.classList.add('hidden');
+                sessionCard.classList.remove('hidden');
+                statusEl.textContent = '';
+                break;
+
+            case 'error':
+                errorMessageEl.textContent = data.message;
+                errorCard.classList.remove('hidden');
+                document.getElementById('qrCard').classList.add('hidden');
+                break;
+
+            case 'closed':
+                statusEl.textContent = 'Connection closed. Refresh to try again.';
+                break;
+        }
+    };
+
+    ws.onerror = (err) => {
+        statusEl.textContent = '❌ Connection error';
+        console.error('WebSocket error:', err);
+    };
+
+    ws.onclose = () => {
+        if (!sessionId) {
+            statusEl.textContent = 'Disconnected. Refresh to try again.';
+        }
+    };
+
+    function copySession() {
+        navigator.clipboard.writeText(sessionId).then(() => {
+            const btn = document.querySelector('.btn');
+            const original = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => { btn.textContent = original; }, 2000);
+        });
+    }
+</script>
+</body>
+</html>

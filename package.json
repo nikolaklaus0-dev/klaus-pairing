@@ -1,0 +1,22 @@
+{
+  "name": "klaus-xmd-pairing-server",
+  "version": "1.0.0",
+  "description": "Pairing server for KLAUS-XMD WhatsApp bot — generates short KLAUS XMD: session codes",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "gifted-baileys": "2.5.8",
+    "qrcode": "^1.5.4",
+    "ws": "^8.16.0",
+    "pino": "^8.11.0",
+    "fs-extra": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
